@@ -1,6 +1,6 @@
 # Seq
 
-[![GoDoc](https://godoc.org/jsouthworth.net/go/seq?status.svg)](https://godoc.org/jsouthworth.net/go/immutable)
+[![GoDoc](https://godoc.org/jsouthworth.net/go/seq?status.svg)](https://godoc.org/jsouthworth.net/go/seq)
 
 Seq is a lazy sequence library for go. It is inspired by Clojure's sequence functions. It originally started because I was interested in transducers and wanted to play with them. Most of the functions in the library are implemeneted as transducers in the [jsouthworth.net/go/transduce](https://godoc.org/jsouthworth.net/go/transduce) library and wrapped with a XfrmSequence here. This library relies heavily on reflection to allow for the most flexibility in what the user provides. This means that it is only type checked at runtime.
 
