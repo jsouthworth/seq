@@ -485,9 +485,9 @@ func TestInterleaveUneven(t *testing.T) {
 }
 
 func ExampleInterleave() {
-	s1 := Seq([]int{1, 2, 3, 4, 5, 6})
-	s2 := Seq([]int{7, 8, 9, 10, 11, 12})
-	s3 := Seq([]int{13, 14, 15, 16, 17, 18})
+	s1 := []int{1, 2, 3, 4, 5, 6}
+	s2 := []int{7, 8, 9, 10, 11, 12}
+	s3 := []int{13, 14, 15, 16, 17, 18}
 	fmt.Println(Interleave(s1, s2, s3))
 	// Output: (1 7 13 2 8 14 3 9 15 4 10 16 5 11 17 6 12 18)
 }
@@ -811,12 +811,10 @@ func ExampleXfrmSequence() {
 		transduce.Dedupe(),
 		transduce.Mapcat(Reduce, RangeUntil),
 		transduce.PartitionAll(3),
-		transduce.Map(Seq), //TODO: return Sequence from PartitionAll
-		transduce.PartitionBy(func(coll Sequence) bool {
+		transduce.PartitionBy(func(coll interface{}) bool {
 			return Reduce(func(res, x int) int { return res + x },
 				0, coll).(int) > 7
 		}),
-		transduce.Map(Seq),    //TODO: return Sequence from PartitionBy
 		transduce.Cat(Reduce), //TODO: implement flatten and combine
 		transduce.Cat(Reduce), //TODO: implement flatten and combine
 		transduce.RandomSample(1.0),

@@ -25,19 +25,23 @@ type Seqable interface {
 }
 
 // First returns the first element of a sequence.
-func First(coll Sequence) interface{} {
-	if coll == nil {
+// coll is any type that can be converted to a Sequence by Seq.
+func First(coll interface{}) interface{} {
+	s := Seq(coll)
+	if s == nil {
 		return nil
 	}
-	return coll.First()
+	return s.First()
 }
 
 // Next returns the sequence without the first element.
-func Next(coll Sequence) Sequence {
-	if coll == nil {
+// coll is any type that can be converted to a Sequence by Seq.
+func Next(coll interface{}) Sequence {
+	s := Seq(coll)
+	if s == nil {
 		return nil
 	}
-	return coll.Next()
+	return s.Next()
 }
 
 // Transduce is a version of Reduce that takes a transducer and a
@@ -48,11 +52,12 @@ func Next(coll Sequence) Sequence {
 // func(result rT, input eT) rT. This will be called using reflection
 // unless it is the non-specialized
 // func(result, input interface{})interface{}.
+// coll is any type that can be converted to a Sequence by Seq.
 func Transduce(
 	xf transduce.Transducer,
 	rf interface{},
 	init interface{},
-	coll Sequence,
+	coll interface{},
 ) interface{} {
 	var rfunc func(result, input interface{}) interface{}
 	switch f := rf.(type) {
@@ -71,8 +76,9 @@ func Transduce(
 // Map returns a lazy sqeuence that contains the result of applying fn
 // to each item in the Sequence. The transforming function 'fn' must match
 // the signature func(in iT) oT and will be called using reflection unless
-// it us the non-specialized type func(interface{})interface{}.
-func Map(fn interface{}, coll Sequence) Sequence {
+// it us the non-specialized type func(interface{})interface{}. coll is any
+// type that can be converted to a Sequence by Seq.
+func Map(fn interface{}, coll interface{}) Sequence {
 	return XfrmSequence(transduce.Map(fn), Seq(coll))
 }
 
@@ -81,8 +87,8 @@ func Map(fn interface{}, coll Sequence) Sequence {
 // be one of the following types something that implements
 // interface { Find(interface{}) (interface{},bool) }, map[iT]oT. Reflection
 // is used unless the map is of the non specialized map[interface{}]interface{}
-// type.
-func Replace(smap interface{}, coll Sequence) Sequence {
+// type. coll is any type that can be converted to a Sequence by Seq.
+func Replace(smap interface{}, coll interface{}) Sequence {
 	return XfrmSequence(transduce.Replace(smap), Seq(coll))
 }
 
@@ -92,10 +98,11 @@ func Replace(smap interface{}, coll Sequence) Sequence {
 // Reduce function. The reducing function 'fn' must match the signature
 // func(result rT, input iT) rT and will be called using reflection unless
 // is is the non-specialized type func(result, input interface{})interface{}.
+// coll is any type that can be converted to a Sequence by Seq.
 func Reduce(
 	fn interface{},
 	init interface{},
-	coll Sequence,
+	coll interface{},
 ) interface{} {
 	f := wrapReduce(fn)
 	//TODO: make a reducer interface to make this efficient
@@ -155,35 +162,40 @@ func Iterate(fn interface{}, x interface{}) Sequence {
 }
 
 // Take will return a lazy but finite sequence consisting of the first
-// n elements of the passed in sequence.
-func Take(n int, coll Sequence) Sequence {
-	return XfrmSequence(transduce.Take(n), coll)
+// n elements of the passed in sequence. coll is any type that can be
+// converted to a Sequence by Seq.
+func Take(n int, coll interface{}) Sequence {
+	return XfrmSequence(transduce.Take(n), Seq(coll))
 }
 
 // TakeNth will return a lazy sequence consisting of every nth item of
-// the passed in collection.
-func TakeNth(n int, coll Sequence) Sequence {
-	return XfrmSequence(transduce.TakeNth(n), coll)
+// the passed in collection. coll is any type that can be converted to
+// a Sequence by Seq.
+func TakeNth(n int, coll interface{}) Sequence {
+	return XfrmSequence(transduce.TakeNth(n), Seq(coll))
 }
 
 // Drop returns a lazy sequence that contains all but the first
-// n elements in the passed in sequence.
-func Drop(n int, coll Sequence) Sequence {
-	return XfrmSequence(transduce.Drop(n), coll)
+// n elements in the passed in sequence. coll is any type that can
+// be converted to a Sequence by Seq.
+func Drop(n int, coll interface{}) Sequence {
+	return XfrmSequence(transduce.Drop(n), Seq(coll))
 }
 
 // Cycle returns a lazy sequence consisting of the repeating the
-// elements of coll.
-func Cycle(coll Sequence) Sequence {
-	return cycleSeq(coll)
+// elements of coll. coll is any type that can be converted to a
+// Sequence by Seq.
+func Cycle(coll interface{}) Sequence {
+	return cycleSeq(Seq(coll))
 }
 
 // Interleave returns a lazy sequence of the first element of each
 // passed in sequence followed by the second, followed by the third, and so on.
+// coll is any type that can be converted to a Sequence by Seq.
 //
 //  [coll[0][0], coll[1][0], ..., coll[n][0], ...,
 //   coll[0][m], coll[1[m], ..., coll[n][m]]
-func Interleave(colls ...Sequence) Sequence {
+func Interleave(colls ...interface{}) Sequence {
 	return LazySeq(func() Sequence {
 		for i, coll := range colls {
 			colls[i] = Seq(coll)
@@ -191,7 +203,7 @@ func Interleave(colls ...Sequence) Sequence {
 				return nil
 			}
 		}
-		rests := make([]Sequence, len(colls))
+		rests := make([]interface{}, len(colls))
 		var nomore bool
 		for i, coll := range colls {
 			rests[i] = Next(coll)
@@ -211,91 +223,105 @@ func Interleave(colls ...Sequence) Sequence {
 }
 
 // Interpose returns a lazy sequence of  the elements of the passed in sequence
-// seperated by the passed in seperator.
-func Interpose(seperator interface{}, coll Sequence) Sequence {
-	return XfrmSequence(transduce.Interpose(seperator), coll)
+// seperated by the passed in seperator. coll is any type that can be converted
+// to a Sequence by Seq.
+func Interpose(seperator interface{}, coll interface{}) Sequence {
+	return XfrmSequence(transduce.Interpose(seperator), Seq(coll))
 }
 
 // Filter returns a lazy sequence that will contain the elements of the
 // passed in sequence for which pred is true. pred must match the signature
 // func(i iT) bool and will be called with reflection unless it is the
-// non-specialized type func(interface{}) bool.
-func Filter(pred interface{}, coll Sequence) Sequence {
-	return XfrmSequence(transduce.Filter(pred), coll)
+// non-specialized type func(interface{}) bool. coll is any type that can
+// be converted to a Sequence by Seq.
+func Filter(pred interface{}, coll interface{}) Sequence {
+	return XfrmSequence(transduce.Filter(pred), Seq(coll))
 }
 
 // Filter returns a lazy sequence that will contain the elements of the
 // passed in sequence for which pred is false. pred must match the signature
 // func(i iT) bool and will be called with reflection unless it is the
-// non-specialized type func(interface{}) bool.
-func Remove(pred interface{}, coll Sequence) Sequence {
-	return XfrmSequence(transduce.Remove(pred), coll)
+// non-specialized type func(interface{}) bool. coll is any type that can
+// be converted to a Sequence by Seq.
+func Remove(pred interface{}, coll interface{}) Sequence {
+	return XfrmSequence(transduce.Remove(pred), Seq(coll))
 }
 
 // TakeWhile returns a lazy sequence of the items from the passed in sequence
 // so long as pred returns true. pred must match the signature
 // func(i iT) bool and will be called with reflection unless it is the
-// non-specialized type func(interface{}) bool.
-func TakeWhile(pred interface{}, coll Sequence) Sequence {
-	return XfrmSequence(transduce.TakeWhile(pred), coll)
+// non-specialized type func(interface{}) bool. coll is any type that can
+// be converted to a Sequence by Seq.
+func TakeWhile(pred interface{}, coll interface{}) Sequence {
+	return XfrmSequence(transduce.TakeWhile(pred), Seq(coll))
 }
 
 // DropWhile returns a lazy sequence of the items from the passed in sequence
 // starting with the first element that for which pred returns false.
 // pred must match the signature func(i iT) bool and will be called with
 // reflection unless it is the non-specialized type func(interface{}) bool.
-func DropWhile(pred interface{}, coll Sequence) Sequence {
-	return XfrmSequence(transduce.DropWhile(pred), coll)
+// coll is any type that can be converted to a Sequence by Seq.
+func DropWhile(pred interface{}, coll interface{}) Sequence {
+	return XfrmSequence(transduce.DropWhile(pred), Seq(coll))
 }
 
 // Keep returns a lazy sequence for which f returns a non nil value
 // The function f must be of the type func(i iT) oT and will be
 // called with reflection unless it is the non-specialized type
-// func(interface{}) interface{}.
-func Keep(f interface{}, coll Sequence) Sequence {
-	return XfrmSequence(transduce.Keep(f), coll)
+// func(interface{}) interface{}. coll is any type that can be
+// converted to a Sequence by Seq.
+func Keep(f interface{}, coll interface{}) Sequence {
+	return XfrmSequence(transduce.Keep(f), Seq(coll))
 }
 
 // KeepIndexed returns a lazy sequence for which f returns a non nil value
 // The function f must be of the type func(idx int, i iT) oT and will be
 // called with reflection unless it is the non-specialized type
-// func(int, interface{}) interface{}.
-func KeepIndexed(f interface{}, coll Sequence) Sequence {
-	return XfrmSequence(transduce.KeepIndexed(f), coll)
+// func(int, interface{}) interface{}. coll is any type that can be
+// converted to a Sequence by Seq.
+func KeepIndexed(f interface{}, coll interface{}) Sequence {
+	return XfrmSequence(transduce.KeepIndexed(f), Seq(coll))
 }
 
 // Dedupe returns a lazy sequence with any duplicates removed.
-func Dedupe(coll Sequence) Sequence {
-	return XfrmSequence(transduce.Dedupe(), coll)
+// coll is any type that can be converted to a Sequence by Seq.
+func Dedupe(coll interface{}) Sequence {
+	return XfrmSequence(transduce.Dedupe(), Seq(coll))
 }
 
 // SplitAt returns a sequence containing two sequences corresponding
-// to the split index.
-func SplitAt(index int, coll Sequence) Sequence {
-	return Cons(Take(index, coll),
-		Cons(Drop(index, coll), nil))
+// to the split index. coll is any type that can be converted to a
+// Sequence by Seq.
+func SplitAt(index int, coll interface{}) Sequence {
+	s := Seq(coll)
+	return Cons(Take(index, s),
+		Cons(Drop(index, s), nil))
 }
 
 // SplitWith returns a sequence containing two sequences corresponding
 // to predicate.
 // pred must match the signature func(i iT) bool and will be called with
 // reflection unless it is the non-specialized type func(interface{}) bool.
-func SplitWith(pred interface{}, coll Sequence) Sequence {
-	return Cons(TakeWhile(pred, coll),
-		Cons(DropWhile(pred, coll), nil))
+// coll is any type that can be converted to a Sequence by Seq.
+func SplitWith(pred interface{}, coll interface{}) Sequence {
+	s := Seq(coll)
+	return Cons(TakeWhile(pred, s),
+		Cons(DropWhile(pred, s), nil))
 }
 
 // Every will iterate over every element of the sequence and return if
 // the predicate hold for every element. pred must match the signature
 // func(i iT) bool and will be called with reflection unless it is the
-// non-specialized type func(interface{}) bool.
-func Every(pred interface{}, coll Sequence) bool {
+// non-specialized type func(interface{}) bool. coll is any type that
+// can be converted to a Sequence by Seq.
+func Every(pred interface{}, coll interface{}) bool {
+	s := Seq(coll)
 	for {
 		switch {
-		case Seq(coll) == nil:
+		case s == nil:
 			return true
-		case apply(pred, First(coll)).(bool):
-			coll = Next(coll)
+		case apply(pred, First(s)).(bool):
+			s = Next(s)
 		default:
 			return false
 		}
@@ -305,35 +331,42 @@ func Every(pred interface{}, coll Sequence) bool {
 // Some will return if pred is true for some element in the sequence.
 // pred must match the signature func(i iT) bool and will be called with
 // reflection unless it is the non-specialized type func(interface{}) bool.
-func Some(pred interface{}, coll Sequence) bool {
-	if Seq(coll) == nil {
+// coll is any type that can be converted to a Sequence by Seq.
+func Some(pred interface{}, coll interface{}) bool {
+	s := Seq(coll)
+	if s == nil {
 		return false
 	}
-	return apply(pred, First(coll)).(bool) || Some(pred, Next(coll))
+	return apply(pred, First(s)).(bool) || Some(pred, Next(s))
 }
 
 // NotEvery is the inverse of Every.
 // pred must match the signature func(i iT) bool and will be called with
 // reflection unless it is the non-specialized type func(interface{}) bool.
-func NotEvery(pred interface{}, coll Sequence) bool {
+// coll is any type that can be converted to a Sequence by Seq.
+func NotEvery(pred interface{}, coll interface{}) bool {
 	return !Every(pred, coll)
 }
 
 // NotAny is the inverse of Some.
 // pred must match the signature func(i iT) bool and will be called with
 // reflection unless it is the non-specialized type func(interface{}) bool.
-func NotAny(pred interface{}, coll Sequence) bool {
+// coll is any type that can be converted to a Sequence by Seq.
+func NotAny(pred interface{}, coll interface{}) bool {
 	return !Some(pred, coll)
 }
 
 // DoAll will realize every element in a lazy sequence and return that sequence.
-func DoAll(coll Sequence) Sequence {
-	DoRun(coll)
-	return coll
+// coll is any type that can be converted to a Sequence by Seq.
+func DoAll(coll interface{}) Sequence {
+	s := Seq(coll)
+	DoRun(s)
+	return s
 }
 
 // DoRun will realize every element in a lazy sequence.
-func DoRun(coll Sequence) {
+// coll is any type that can be converted to a Sequence by Seq.
+func DoRun(coll interface{}) {
 	s := Seq(coll)
 	for s != nil {
 		s = Seq(Next(s))
@@ -360,15 +393,16 @@ func Seq(coll interface{}) Sequence {
 }
 
 // Slice will convert a lazy sequence to a go slice realizing each element.
-func Slice(coll Sequence) []interface{} {
+// coll is any type that can be converted to a Sequence by Seq.
+func Slice(coll interface{}) []interface{} {
 	return Reduce(func(a []interface{}, b interface{}) []interface{} {
 		return append(a, b)
 	}, []interface{}{}, coll).([]interface{})
 }
 
 // Concat returns a lazy sequence that is the concatenation of the provided
-// sequences.
-func Concat(colls ...Sequence) Sequence {
+// sequences. coll is any type that can be converted to a Sequence by Seq.
+func Concat(colls ...interface{}) Sequence {
 	return XfrmSequence(transduce.Cat(Reduce), Seq(colls))
 }
 
@@ -376,7 +410,8 @@ func Concat(colls ...Sequence) Sequence {
 // provided sequences modified by the mapping function f.
 // f must be of the form func(in iT) oT and will be called with
 // reflection unless it is the non-specialized func(interface{})interface{}.
-func Mapcat(f interface{}, colls ...Sequence) Sequence {
+// colls is an type that can be converted to a Sequence by Seq.
+func Mapcat(f interface{}, colls ...interface{}) Sequence {
 	return XfrmSequence(transduce.Mapcat(Reduce, f), Seq(colls))
 }
 
@@ -384,7 +419,8 @@ func Mapcat(f interface{}, colls ...Sequence) Sequence {
 // the provided sequence. The partitions are determined by f which is
 // any function of type func(i iT) oT. When f returns a different value
 // from its previous call then a parition is created.
-func PartitionBy(f interface{}, coll Sequence) Sequence {
+// coll is any type that can be converted to a Sequence by Seq.
+func PartitionBy(f interface{}, coll interface{}) Sequence {
 	return XfrmSequence(
 		transduce.Compose(transduce.PartitionBy(f),
 			transduce.Map(Seq)),
@@ -394,8 +430,8 @@ func PartitionBy(f interface{}, coll Sequence) Sequence {
 // PartitionAll returns a lazy sequence that consists of partitions of
 // the provided sequence of n elements. If the length of the sequence
 // is not a multiple of n then the remainder will be returned as the
-// last element.
-func PartitionAll(n int, coll Sequence) Sequence {
+// last element. coll is any type that can be converted to a Sequence by Seq.
+func PartitionAll(n int, coll interface{}) Sequence {
 	return XfrmSequence(
 		transduce.Compose(transduce.PartitionAll(n),
 			transduce.Map(Seq)),
