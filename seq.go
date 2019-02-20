@@ -480,6 +480,13 @@ func apply(f interface{}, args ...interface{}) interface{} {
 	}
 }
 
+// ConvertToString converts any Sequence to a string. This is useful for
+// other sequence implementations that would like to use the same
+// algorithm.
+func ConvertToString(coll Sequence) string {
+	return seqString(coll)
+}
+
 func seqString(coll Sequence) string {
 	var b strings.Builder
 	coll = Seq(coll)
