@@ -7,9 +7,9 @@ package seq
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
+	"jsouthworth.net/go/dyn"
 	"jsouthworth.net/go/transduce"
 )
 
@@ -441,43 +441,8 @@ func PartitionAll(n int, coll interface{}) Sequence {
 // apply allows one to call arbitrary go functions using reflection.
 // It handles the pitfalls of calling functions using reflection
 // so that a simple interface is provided to callers.
-// This probably belongs in another library of reflection helpers
-// but until that is written it will exist here.
 func apply(f interface{}, args ...interface{}) interface{} {
-	fnv := reflect.ValueOf(f)
-	fnt := fnv.Type()
-	argvs := make([]reflect.Value, len(args))
-	for i, arg := range args {
-		if arg == nil {
-			fnint := fnt.In(i)
-			fnink := fnint.Kind()
-			switch fnink {
-			case reflect.Chan, reflect.Func,
-				reflect.Interface, reflect.Map,
-				reflect.Ptr, reflect.Slice:
-				argvs[i] = reflect.Zero(fnint)
-			default:
-				// this will cause a panic but that is what is
-				// intended
-				argvs[i] = reflect.ValueOf(arg)
-			}
-		} else {
-			argvs[i] = reflect.ValueOf(arg)
-		}
-	}
-	outvs := fnv.Call(argvs)
-	switch len(outvs) {
-	case 0:
-		return nil
-	case 1:
-		return outvs[0].Interface()
-	default:
-		outs := make([]interface{}, len(outvs))
-		for i, outv := range outvs {
-			outs[i] = outv.Interface()
-		}
-		return outs
-	}
+	return dyn.Apply(f, args...)
 }
 
 // ConvertToString converts any Sequence to a string. This is useful for
