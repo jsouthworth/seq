@@ -7,6 +7,7 @@ package seq
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"jsouthworth.net/go/dyn"
@@ -42,6 +43,61 @@ func Next(coll interface{}) Sequence {
 		return nil
 	}
 	return s.Next()
+}
+
+// Conj conjoins a new element into a collection returning the
+// new collection.
+func Conj(coll interface{}, elem interface{}) interface{} {
+	type conjoiner interface {
+		Conj(elem interface{}) interface{}
+	}
+	switch v := coll.(type) {
+	case conjoiner:
+		return v.Conj(elem)
+	default:
+		val := reflect.ValueOf(coll)
+		switch val.Kind() {
+		case reflect.Slice:
+			return sliceConj(val, elem)
+		case reflect.Map:
+			return mapConj(val, elem)
+		default:
+			_ = coll.(conjoiner)
+			return nil
+		}
+	}
+}
+
+func sliceConj(coll reflect.Value, elem interface{}) interface{} {
+	return reflect.Append(coll, reflect.ValueOf(elem)).Interface()
+}
+
+func mapConj(coll reflect.Value, elem interface{}) interface{} {
+	entry := elem.(interface {
+		Key() interface{}
+		Value() interface{}
+	})
+	coll.SetMapIndex(reflect.ValueOf(entry.Key()),
+		reflect.ValueOf(entry.Value()))
+	return coll.Interface()
+}
+
+// Into takes an initial collection and a sequence and puts all
+// the elements of the sequence into the collection returning the
+// result.
+func Into(to interface{}, from interface{}) interface{} {
+	return Reduce(Conj, to, from)
+}
+
+// TransformInto takes an initial collection and a sequence and runs all
+// the elements of the sequence through the transducer and places the
+// results into the collection returning the result.
+func TransformInto(
+	to interface{},
+	xfrm transduce.Transducer,
+	from interface{},
+) interface{} {
+	return Transduce(xfrm, Conj, to, from)
 }
 
 // Transduce is a version of Reduce that takes a transducer and a

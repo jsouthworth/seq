@@ -18,6 +18,105 @@ func TestFirst(t *testing.T) {
 	}
 }
 
+func TestConjSlice(t *testing.T) {
+	if err := quick.Check(func(is []int, other int) bool {
+		new := Conj(is, other).([]int)
+		return len(new) == len(is)+1 &&
+			new[len(new)-1] == other
+	}, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+type mapEntry struct {
+	key interface{}
+	val interface{}
+}
+
+func (e mapEntry) Key() interface{} {
+	return e.key
+}
+func (e mapEntry) Value() interface{} {
+	return e.val
+}
+
+func TestConjMap(t *testing.T) {
+	if err := quick.Check(func(is map[string]int, otherk string, other int) bool {
+		new := Conj(is, mapEntry{otherk, other}).(map[string]int)
+		return new[otherk] == other
+	}, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+type intSliceConjoiner struct {
+	slice []int
+}
+
+func (c *intSliceConjoiner) Conj(elem interface{}) interface{} {
+	c.slice = append(c.slice, elem.(int))
+	return c.slice
+}
+
+func TestConjConjoiner(t *testing.T) {
+	if err := quick.Check(func(is []int, other int) bool {
+		new := Conj(&intSliceConjoiner{is}, other).([]int)
+		return len(new) == len(is)+1 &&
+			new[len(new)-1] == other
+	}, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestInvalidConj(t *testing.T) {
+	if err := quick.Check(func(i int, other int) (out bool) {
+		defer func() {
+			r := recover()
+			if r != nil {
+				out = true
+			}
+		}()
+		_ = Conj(i, other)
+		return false
+	}, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestInfo(t *testing.T) {
+	if err := quick.Check(func(is []int) bool {
+		new := Into([]int{}, is).([]int)
+		var allMatched = true
+		for i, v := range new {
+			if is[i] != v {
+				allMatched = false
+			}
+		}
+		return len(new) == len(is) && allMatched
+	}, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestTransformInfo(t *testing.T) {
+	if err := quick.Check(func(is []int) bool {
+		new := TransformInto([]int{},
+			transduce.Map(func(in int) interface{} {
+				return in * in
+			}),
+			is).([]int)
+		var allMatched = true
+		for i, v := range is {
+			if new[i] != v*v {
+				allMatched = false
+			}
+		}
+		return len(new) == len(is) && allMatched
+	}, nil); err != nil {
+		t.Error(err)
+	}
+}
+
 func ExampleFirst() {
 	fmt.Println(First(RangeUntil(10)))
 	// Output: 0
