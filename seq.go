@@ -12,6 +12,7 @@ import (
 
 	"jsouthworth.net/go/dyn"
 	"jsouthworth.net/go/transduce"
+	"jsouthworth.net/go/try"
 )
 
 // Sequence is any type that can return iterate down its elements.
@@ -86,6 +87,10 @@ func mapConj(coll reflect.Value, elem interface{}) interface{} {
 // the elements of the sequence into the collection returning the
 // result.
 func Into(to interface{}, from interface{}) interface{} {
+	coll, err := try.Apply(dyn.Send, to, "AsTransient")
+	if err == nil {
+		return dyn.Send(Reduce(Conj, coll, from), "AsPersistent")
+	}
 	return Reduce(Conj, to, from)
 }
 
@@ -97,6 +102,11 @@ func TransformInto(
 	xfrm transduce.Transducer,
 	from interface{},
 ) interface{} {
+	coll, err := try.Apply(dyn.Send, to, "AsTransient")
+	if err == nil {
+		return dyn.Send(
+			Transduce(xfrm, Conj, coll, from), "AsPersistent")
+	}
 	return Transduce(xfrm, Conj, to, from)
 }
 
