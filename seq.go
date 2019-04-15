@@ -170,8 +170,15 @@ func Reduce(
 	init interface{},
 	coll interface{},
 ) interface{} {
+	type reducer interface {
+		Reduce(interface{}, interface{}) interface{}
+	}
+	rducr, ok := coll.(reducer)
+	if ok {
+		return rducr.Reduce(fn, init)
+	}
+
 	f := wrapReduce(fn)
-	//TODO: make a reducer interface to make this efficient
 	s := Seq(coll)
 	if s == nil {
 		return init
