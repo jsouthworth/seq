@@ -28,18 +28,6 @@ func TestConjSlice(t *testing.T) {
 	}
 }
 
-type mapEntry struct {
-	key interface{}
-	val interface{}
-}
-
-func (e mapEntry) Key() interface{} {
-	return e.key
-}
-func (e mapEntry) Value() interface{} {
-	return e.val
-}
-
 func TestConjMap(t *testing.T) {
 	if err := quick.Check(func(is map[string]int, otherk string, other int) bool {
 		new := Conj(is, mapEntry{otherk, other}).(map[string]int)
