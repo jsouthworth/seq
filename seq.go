@@ -388,7 +388,7 @@ func Every(pred interface{}, coll interface{}) bool {
 		switch {
 		case s == nil:
 			return true
-		case apply(pred, First(s)).(bool):
+		case wrapPred(pred)(First(s)):
 			s = Next(s)
 		default:
 			return false
@@ -405,7 +405,18 @@ func Some(pred interface{}, coll interface{}) bool {
 	if s == nil {
 		return false
 	}
-	return apply(pred, First(s)).(bool) || Some(pred, Next(s))
+	return wrapPred(pred)(First(s)) || Some(pred, Next(s))
+}
+
+func wrapPred(pred interface{}) func(interface{}) bool {
+	switch fn := pred.(type) {
+	case func(interface{}) bool:
+		return fn
+	default:
+		return func(in interface{}) bool {
+			return apply(fn, in).(bool)
+		}
+	}
 }
 
 // NotEvery is the inverse of Every.
